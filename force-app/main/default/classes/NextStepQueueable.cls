@@ -17,42 +17,74 @@
  * 
  * Note: The class below contains placeholders for implementing a queueable job to update accounts and opportunities.
  */
-public with sharing class NextStepQueueable {
+public with sharing class NextStepQueueable implements Queueable{
 
     // Member variable to store the accounts
     private Map<Id,Account> accounts;
+    private static final Integer MAX_JOBS = 5;
 
     // Constructor to accept the accounts
-    public NextStepQueueable(Map<Id,Account> accounts) {
-        // Store the accounts in a member variable
+    public NextStepQueueable() {
+        //this.accounts = accounts;
     }
 
     // Method to queue the job
     public static void enqueueJob() {
         // Get 10 accounts with Next Step populated
-
+        List<Account> acctList = [SELECT Id, Name, Next_Step__c from Account where Next_Step__c != null LIMIT 10];
+        List<Opportunity> oppsList = [SELECT Id, Name, NextStep from Opportunity where NextStep != null LIMIT 10];
         // If there are any accounts, queue the job using System.enqueueJob
+
+        if(acctList.isEmpty() && oppsList.isEmpty()) {
+            return;
+        }
+        else {
+            if(!acctList.isEmpty()) {
+                for(Account acc : acctList) {
+                    removeNextStep(acc);
+                }
+                update acctList;
+            }
+
+            if(!oppsList.isEmpty()) {
+                for(Opportunity opp : oppsList) {
+                    removeNextStep(opp);
+                }
+                update oppsList;
+            }
+        }
     }
 
     /*
      * Update/Uncomment the template code to create a method
      * Method to execute the queueable job
      */
-    //[public | private ] [static] data_type execute (input parameters) {
+    public void execute (QueueableContext queueableContext) {
         // Get the accounts from the member variable
-
+        List<Account> acctList = [SELECT Id, Name, Next_Step__c from Account where Next_Step__c != null LIMIT 10];
             // Remove the Next Step using the helper method
-
+        if(!acctList.isEmpty()) {
+            for(Account acc : acctList) {
+                removeNextStep(acc);
+            }
+        }
         // Update the accounts
+        update acctList;
 
         // Get the opportunities related to the accounts
-
+        List<Opportunity> oppsList = [SELECT Id, Name, NextStep from Opportunity where NextStep != null LIMIT 10];
             // Remove the Next Step using the helper method
-
+        if(!oppsList.isEmpty()) {
+            for(Opportunity opp : oppsList) {
+                removeNextStep(opp);
+            }
+        }
         // Update the opportunities
-
+        update oppsList;
         // Call the enqueueJob method to queue another job to process more records.
-    //}
+
+        System.enqueueJob(new NextStepQueueable());
+    }
 
     // Helper method to remove the Next Step
     // Overloaded method to accept an opportunity
